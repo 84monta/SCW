@@ -1,0 +1,38 @@
+scw　<- function(){
+    DIM <- 64
+    SAMPLE_NUM <- 10
+    C <- 1 #C is a parameter to tradeoﬀ the passiveness and aggressiveness
+    y <- as.matrix(read.csv("SCW/digits_train.csv",nrow=1,header=F))
+    x <- as.matrix(read.csv("SCW/digits_train.csv",skip=1,header=F))
+    T <- length(y)
+    mu <- t(numeric(DIM))
+    eta <- 0.95
+    phi <- qnorm(eta)
+    psi <- 1 + phi^2 / 2
+    zeta <- 1 + phi^2
+    Sigma <- diag(DIM)
+    
+    y_test <- as.matrix(read.csv("SCW/digits_test.csv",nrow=1,header=F))
+    x_test <- as.matrix(read.csv("SCW/digits_test.csv",skip=1,header=F))   
+    
+    #Learning Routine
+    for(t in 1:T){
+        x_t <- as.matrix(x[t,])
+        y_t <- y[,t]
+        cumulative <- max(0, phi * sqrt(t(x_t) %*% Sigma %*% x_t) - y_t %*% mu %*% x_t)
+        if (cumulative > 0){
+            v_t <- t(x_t) %*% Sigma %*% x_t
+            m_t <- y_t %*% mu %*% as.matrix(x_t)
+            n_t <- v_t + 1/(2*C)
+            ganma_t <- phi * sqrt(phi^2 * m_t^2 * v_t^2 + 4 * n_t * v_t *(n_t * v_t * phi^2))
+            alfa_t <- max(0,as.numeric(-(2 *m_t * n_t + phi^2 * m_t * v_t) + ganma_t)/(2 * (n_t^2 + n_t * v_t *phi^2)))
+            beta_t <- as.numeric(alfa_t * phi /(sqrt(v_t) + v_t * alfa_t * phi))
+            mu <- mu + t(alfa_t * y_t * Sigma %*% x_t)
+            Sigma <- Sigma - beta_t * Sigma * x_t  %*% t(x_t) * Sigma
+        }
+    }
+    
+    #Predict Tests
+    result <- apply(mu %*% t(x_test),1,sign)
+    table(result,y_test)
+}
